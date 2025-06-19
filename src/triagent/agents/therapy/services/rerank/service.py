@@ -10,7 +10,7 @@ import asyncio
 from triagent.config import settings
 from triagent.logging import logger
 from litellm import acompletion
-from triagent.agents.treatment.services.rerank.prompt import group_ranking_system_prompt, group_ranking_user_prompt
+from triagent.agents.therapy.services.rerank.prompt import group_ranking_system_prompt, group_ranking_user_prompt
 
 class TourRankService:
     """

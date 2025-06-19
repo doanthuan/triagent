@@ -5,9 +5,9 @@ import aiohttp
 from litellm import acompletion
 from triagent.config import settings
 from triagent.logging import logger
-from triagent.agents.treatment.services.trial.prompts import CLINICAL_TRIALS_SEARCH_QUERY_PROMPT, CLINICAL_TRIAL_ELIGIBILITY_PROMPT, PATIENT_DATA_EXTRACTION_PROMPT
-from triagent.agents.treatment.services.trial.entity import PatientData
-from triagent.agents.treatment.services.trial.utils import parse_json_from_response
+from triagent.agents.therapy.services.trial.prompts import CLINICAL_TRIALS_SEARCH_QUERY_PROMPT, CLINICAL_TRIAL_ELIGIBILITY_PROMPT, PATIENT_DATA_EXTRACTION_PROMPT
+from triagent.agents.therapy.services.trial.entity import PatientData
+from triagent.agents.therapy.services.trial.utils import parse_json_from_response
 
 
 class TrialService:
@@ -79,7 +79,6 @@ class TrialService:
             "query.term": clinical_trials_query,
             "pageSize": 1000,
             "filter.overallStatus": "RECRUITING",
-            "fields": "ConditionsModule|EligibilityModule|IdentificationModule"
         }
         async with aiohttp.ClientSession() as session:
             async with session.get("https://clinicaltrials.gov/api/v2/studies", params=params) as resp:
@@ -202,7 +201,7 @@ class TrialService:
         return eligible_trials
 
     @staticmethod
-    def format_trials_human_readable(trials: list[dict]) -> str:
+    def format_trials_response(trials: list[dict]) -> str:
         """
         Formats a list of clinical trial dictionaries into a human-readable text summary.
 

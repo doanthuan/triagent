@@ -5,8 +5,8 @@ Implements the multi-agent architecture for research.
 
 from google.adk.agents import LlmAgent
 
-from triagent.agents.research.prompts import research_agent_prompt
-from triagent.agents.research.tools import predict_drug_toxicity, pubmed_search
+from triagent.agents.med_research.prompts import research_agent_prompt
+from triagent.agents.med_research.tools import predict_drug_toxicity, pubmed_search
 from triagent.config import settings
 
 # Research Agent

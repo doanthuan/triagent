@@ -1,3 +1,5 @@
+Please give me treatment for this patient:
+
 # Patient Summary
 
 **Patient**: Not specified **Age**: Not specified **Sex**: Male **Date of Diagnosis**: March 2025 **Primary Cancer Type**: Brain cancer (Glioblastoma) **Medical Diagnosis**: Grade 4 Brain Cancer/Glioblastoma, IDH-wildtype, extensively infiltrative **Current Treatment Status**: Newly diagnosed with treatment started
