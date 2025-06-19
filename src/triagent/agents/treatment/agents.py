@@ -15,6 +15,6 @@ treatment_agent = LlmAgent(
     model=settings.gemini_pro_model,
     instruction=clinical_trial_agent_prompt,
     description="You are an expert clinical trial agent.",
-    tools=[search_clinical_trials],
+    tools=[search_clinical_trials, rerank_trials],
     output_key="clinical_trial_agent_response",  # Stores output in state['clinical_trial_agent_response']
 )
