@@ -1,4 +1,43 @@
+Sample 1: Medical Deep Reseach
 Which of the following drugs is preferred for further development? 1. CC(=O)OC1=CC=CC=C1C(=O)O or 2. O=C(CCCCCCC(=O)Nc1ccccc1)NO
 
-# Fact Verify
-Verify this claim: Bariatric surgery increases rates of postmenopausal breast cancer. Yes no No
+Sample 2: Fact Verify
+Verify this claim: Bariatric surgery increases rates of postmenopausal breast cancer.
+
+Sample 3: Emerging Treatments
+Please suggest emerging treatments for this patient:
+
+# Patient Summary
+
+**Age**: 44 
+**Sex**: Female  
+**Date of Diagnosis**: October 2021  
+**Primary Cancer Type**: Pancreatic cancer (exocrine, PDAC)  
+**Medical Diagnosis**: Stage IV pancreatic acinar cancer with liver and peritoneal metastasis  
+**Current Treatment Status**: Signs of treatment resistance/cancer progression with new treatment likely needed  
+
+## Treatment History
+
+**Treatments**:  
+- Surgery, Chemotherapy
+
+**Specific Interventions**:  
+- 10/2021: DISTAL PANCREATECTOMY
+- 01/2023: LAPAROSCOPIC HEPATECTOMY LEFT
+- 11/2023: LEFT TRISEGMENTECTOMY & RESECTION PORTION OF RIGHT HEMI DIAPHRAGM
+- Current: oxaliplatin+5-FU
+
+## Molecular/Genetic Characteristics
+
+**Biomarkers**:  
+- BRCA-2
+- MTAP deleted tumor
+
+## Additional Information
+
+**Oncology History**: Treated at Stanford by Dr. George Fisher. Surgeries performed by Dr. Brendon Visser.  
+**Family History**: Father (lymphoma, prostate), Mother (breast), Paternal Aunt (breast), Paternal Aunt (breast, ovarian), 2 Maternal cousins (breast)
+
+## Clinical Questions
+
+1. Patient was a candidate for clinical trial NCT05732831 but was excluded due to having acinar pancreatic cancer instead of adenocarcinoma. Seeking help to arrange compassionate use of clinical trial therapies.
