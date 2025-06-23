@@ -3,3 +3,4 @@ litellm
 loguru
 exa_py
 biopython
+tooluniverse

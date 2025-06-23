@@ -2,7 +2,7 @@ import json
 import re
 from typing import Any, List, Optional
 
-from triagent.agents.fact_verifier.entity import FactVerifierResponse
+from triagent.agents.tx_verifier.entity import FactVerifierResponse
 from triagent.logging import logger
 
 

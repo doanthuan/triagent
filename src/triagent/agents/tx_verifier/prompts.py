@@ -59,10 +59,6 @@ fact_check_prompt = """
     - Do not include any fields beyond those specified
     - Do not include any explanatory text outside the JSON structure
 
-    # Context Information:
-    **Disease**: {disease}
-    **Patient Profile**: {patient_summary}
-
     # Claims to verify:
     {claims}
 """

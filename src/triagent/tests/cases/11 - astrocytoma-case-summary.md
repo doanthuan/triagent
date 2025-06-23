@@ -1,8 +1,7 @@
-Please give me treatment for this patient:
+Please suggest emerging treatments for this patient:
 
 # Patient Summary
 
-**Patient**: Not specified  
 **Age**: 37  
 **Sex**: Female  
 **Date of Diagnosis**: December 2022  
@@ -54,8 +53,3 @@ Please give me treatment for this patient:
 - Intermittent facial agnosia
 - Left-sided vision cut
 - No current seizures
-
-## Clinical Questions
-
-1. Are there updated clinical trials available for recurrent Grade 4 Astrocytoma?
-2. Are there alternative chemotherapy options for this case?

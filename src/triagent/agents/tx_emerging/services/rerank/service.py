@@ -6,12 +6,11 @@ import time
 import numpy as np
 import logging
 from typing import List, Dict, Tuple, Optional, cast
-import asyncio
 from triagent.config import settings
 from triagent.logging import logger
-from litellm import acompletion
-from triagent.agents.therapy.services.rerank.prompt import group_ranking_system_prompt, group_ranking_user_prompt
-
+from litellm import completion
+from triagent.agents.tx_emerging.services.rerank.prompt import group_ranking_system_prompt, group_ranking_user_prompt
+from triagent.agents.tx_emerging.services.trial.service import TrialService
 class TourRankService:
     """
     Service class for document reranking using tournament-style ranking with GPT
@@ -54,8 +53,8 @@ class TourRankService:
                 docs_groups.append(cur_group)
         return docs_groups
     
-    async def group_ranking(self, group_trials: List[dict], top_m: int, groups_scores: Dict[str, int], patient_info: str):
-        """Process a group of documents for ranking using litellm acompletion"""
+    def group_ranking(self, group_trials: List[dict], top_m: int, groups_scores: Dict[str, int], patient_info: str):
+        """Process a group of documents for ranking using litellm completion"""
         random.shuffle(group_trials)
         
         # Prepare docs_content and N
@@ -78,7 +77,7 @@ class TourRankService:
         ]
         
         try:
-            response = await acompletion(
+            response = completion(
                 model=settings.litellm_model_default,
                 messages=messages,
                 stream=False,
@@ -92,7 +91,7 @@ class TourRankService:
         except Exception as e:
             logger.error(f"Error during group ranking: {e}")
     
-    async def tournament_ranking(self, i_tournament: int, trials: List[dict], patient_info: str) -> Dict[str, int]:
+    def tournament_ranking(self, i_tournament: int, trials: List[dict], patient_info: str) -> Dict[str, int]:
         """Process filtering through multiple tournament stages"""
         random.shuffle(trials)
         
@@ -116,18 +115,13 @@ class TourRankService:
                 docs_groups = self.group_docs(ranked_list, doc_per_group)
                 last_stage = False
             groups_scores = {}
-            tasks = []
 
             logger.info(f"Start group ranking for stage {stage+1} with {num_docs} trials and {len(docs_groups)} groups")
             
             for group_trials in docs_groups:
                 top_m = max(1, len(group_trials) // 2)
                 logger.info(f"Group ranking with {len(group_trials)} trials and top_m={top_m}")
-                task = self.group_ranking(group_trials, top_m, groups_scores, patient_info)
-                tasks.append(task)
-            
-            # Wait for all group ranking tasks to complete
-            await asyncio.gather(*tasks)
+                self.group_ranking(group_trials, top_m, groups_scores, patient_info)
             
             # Combine the results
             for nct_id, score in groups_scores.items():
@@ -148,13 +142,12 @@ class TourRankService:
         logger.info(f"Tournament {i_tournament+1} scores: {tournament_scores}")
         return tournament_scores
 
-    async def rerank_trials(self, trials: List[dict], patient_info: str) -> Tuple[List[dict], Dict[str, int]]:
+    def rerank_trials(self, trials: List[dict], patient_info: str, top_k: int = 3) -> Tuple[List[dict], Dict[str, int]]:
         
         logger.info(f"Ranking trials for patient: {patient_info}")
         
         # Run tournaments
-        tasks = [self.tournament_ranking(i_tournament, trials, patient_info) for i_tournament in range(self.max_tournaments)]
-        tournament_scores = await asyncio.gather(*tasks)
+        tournament_scores = [self.tournament_ranking(i_tournament, trials, patient_info) for i_tournament in range(self.max_tournaments)]
 
         # Process each tournament
         scores_list = {trial['nct_id']: 0 for trial in trials}
@@ -169,7 +162,10 @@ class TourRankService:
             list(scores_list.keys()), 
             list(scores_list.values()),
             trials_dict
-        )
-        return ranked_list, scores_list
+        )[:top_k]
+
+        # format the ranked list
+        formatted_ranked_list = TrialService.format_trials_response(ranked_list)
+        return formatted_ranked_list, scores_list
 
 

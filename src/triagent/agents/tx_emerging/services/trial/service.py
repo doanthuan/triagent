@@ -1,18 +1,17 @@
 import json
 import re
-import asyncio
-import aiohttp
-from litellm import acompletion
+import requests
+from litellm import completion
 from triagent.config import settings
 from triagent.logging import logger
-from triagent.agents.therapy.services.trial.prompts import CLINICAL_TRIALS_SEARCH_QUERY_PROMPT, CLINICAL_TRIAL_ELIGIBILITY_PROMPT, PATIENT_DATA_EXTRACTION_PROMPT
-from triagent.agents.therapy.services.trial.entity import PatientData
-from triagent.agents.therapy.services.trial.utils import parse_json_from_response
+from triagent.agents.tx_emerging.services.trial.prompts import CLINICAL_TRIALS_SEARCH_QUERY_PROMPT, CLINICAL_TRIAL_ELIGIBILITY_PROMPT, PATIENT_DATA_EXTRACTION_PROMPT
+from triagent.agents.tx_emerging.services.trial.entity import PatientData
+from triagent.agents.tx_emerging.services.trial.utils import parse_json_from_response
 
 
 class TrialService:
     @staticmethod
-    async def _parse_patient_data_from_string(patient_info: str) -> PatientData:
+    def parse_patient_data_from_string(patient_info: str) -> dict:
         """
         Uses an LLM to extract structured patient data from an unstructured string.
 
@@ -20,7 +19,7 @@ class TrialService:
             patient_info (str): The unstructured patient information.
 
         Returns:
-            PatientData: The structured patient data.
+            dict: The structured patient data.
         """
         system_prompt = PATIENT_DATA_EXTRACTION_PROMPT
         user_prompt = "Unstructured Patient Information: \n" + patient_info
@@ -28,7 +27,7 @@ class TrialService:
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt}
         ]
-        response = await acompletion(
+        response = completion(
             model=settings.litellm_model_default,
             messages=messages,
             stream=False,
@@ -37,29 +36,33 @@ class TrialService:
         logger.info(f"Patient data extraction response: {content}")
         data = parse_json_from_response(content)
         logger.info(f"Parsed patient data: {data}")
-        return PatientData(**data)
+        return data
 
     @staticmethod
-    async def _generate_clinical_trial_search_criteria(patient_data: PatientData) -> str:
+    def _generate_clinical_trial_search_criteria(patient_data: dict) -> str:
         """
         Generates a search query that can be used to call the clinical trial API on https://clinicaltrials.gov.
 
         Args:
-            biomarkers (str): The biomarkers information of the patient.
-            histology (str): The histology information of the patient.
-            staging (str): The staging information of the patient.
+            patient_data: dict
         """
         system_prompt = CLINICAL_TRIALS_SEARCH_QUERY_PROMPT
-        user_prompt = "Structured Patient Attributes: \ndata= " + json.dumps({
-            'biomarkers': patient_data.biomarkers,
-            'histology': patient_data.histology,
-            'staging': patient_data.staging,
-        }, indent=4)
+        logger.info(f"Patient data: {patient_data}")
+        patient_data_query_json = {}
+        if 'biomarkers' in patient_data:
+            patient_data_query_json['biomarkers'] = patient_data['biomarkers']
+        if 'histology' in patient_data:
+            patient_data_query_json['histology'] = patient_data['histology']
+        if 'staging' in patient_data:
+            patient_data_query_json['staging'] = patient_data['staging']
+
+        user_prompt = "Structured Patient Attributes: \ndata= " + json.dumps(patient_data_query_json, indent=4)
+        logger.info(f"Generate_clinical_trial_search_criteria with user prompt: {user_prompt}")
         messages = []
         messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": user_prompt})
 
-        response = await acompletion(
+        response = completion(
             model=settings.litellm_model_default,
             messages=messages,
             stream=False,
@@ -71,116 +74,101 @@ class TrialService:
         return clinical_trials_query
     
     @staticmethod
-    async def _search_clinical_trials_with_query(clinical_trials_query: str, limit: int = 1000) -> list[dict]:
+    def _search_clinical_trials_with_query(clinical_trials_query: str, limit: int = 10) -> list[dict]:
         """
         Searches for clinical trials based on a query.
         """
         params = {
             "query.term": clinical_trials_query,
-            "pageSize": 1000,
+            "pageSize": limit,
             "filter.overallStatus": "RECRUITING",
         }
-        async with aiohttp.ClientSession() as session:
-            async with session.get("https://clinicaltrials.gov/api/v2/studies", params=params) as resp:
-                resp.raise_for_status()
-                result = await resp.json()
+        try:
+            resp = requests.get("https://clinicaltrials.gov/api/v2/studies", params=params)
+            resp.raise_for_status()
+            result = resp.json()
 
-        studies = result["studies"]
-        seen_nct_ids = set()
-        trials_data = []
-        for study in studies:
-            protocol = study.get("protocolSection", {})
-            identification = protocol.get("identificationModule", {})
-            status_module = protocol.get("statusModule", {})
-            design_module = protocol.get("designModule", {})
-            description_module = protocol.get("descriptionModule", {})
-            interventions_module = protocol.get(
-                "armsInterventionsModule",
-                {},
-            )
-            contacts_module = protocol.get("contactsLocationsModule", {})
-
-            trial_info = {
-                "nct_id": identification.get("nctId"),
-                "title": identification.get("briefTitle"),
-                "status": status_module.get("overallStatus"),
-                "phase": design_module.get("phases", []),
-                "study_type": design_module.get("studyType"),
-                "brief_summary": description_module.get("briefSummary"),
-                "detailed_description": description_module.get(
-                    "detailedDescription",
-                ),
-                "interventions": interventions_module.get(
-                    "interventions",
-                    [],
-                ),
-                "arm_groups": interventions_module.get("armGroups", []),
-                "eligibility": protocol.get("eligibilityModule", {}),
-                "sponsor": protocol.get("sponsorCollaboratorsModule", {})
-                .get("leadSponsor", {})
-                .get("name"),
-                "country": contacts_module.get("locations", []),
-                "completion_date": status_module.get(
-                    "completionDateStruct",
+            studies = result["studies"]
+            seen_nct_ids = set()
+            trials_data = []
+            for study in studies:
+                protocol = study.get("protocolSection", {})
+                identification = protocol.get("identificationModule", {})
+                status_module = protocol.get("statusModule", {})
+                design_module = protocol.get("designModule", {})
+                description_module = protocol.get("descriptionModule", {})
+                interventions_module = protocol.get(
+                    "armsInterventionsModule",
                     {},
-                ).get("date"),
-            }
+                )
+                trial_info = {
+                    "nct_id": identification.get("nctId"),
+                    "title": identification.get("briefTitle"),
+                    "status": status_module.get("overallStatus"),
+                    "phase": design_module.get("phases", []),
+                    "study_type": design_module.get("studyType"),
+                    "brief_summary": description_module.get("briefSummary"),
+                    "detailed_description": description_module.get(
+                        "detailedDescription",
+                    ),
+                    "interventions": interventions_module.get(
+                        "interventions",
+                        [],
+                    ),
+                    "eligibility": protocol.get("eligibilityModule", {}),
+                    "completion_date": status_module.get(
+                        "completionDateStruct",
+                        {},
+                    ).get("date"),
+                }
 
-            # get the country from the country field
-            country_set = set()
-            for loc in trial_info["country"]:
-                new_country = loc.get("country", "")
-                if new_country:
-                    country_set.add(new_country)
-            trial_info["country"] = list(country_set)
+                if trial_info["nct_id"] not in seen_nct_ids:
+                    trials_data.append(trial_info)
+                    seen_nct_ids.add(trial_info["nct_id"])
 
-            if trial_info["nct_id"] not in seen_nct_ids:
-                trials_data.append(trial_info)
-                seen_nct_ids.add(trial_info["nct_id"])
-
-            # If a trial limit is specified, stop when reached
-            if limit and len(trials_data) >= limit:
-                logger.info(f"Reached limit of {limit} trials")
-                return trials_data[:limit]
+                # If a trial limit is specified, stop when reached
+                if limit and len(trials_data) >= limit:
+                    logger.info(f"Reached limit of {limit} trials")
+                    return trials_data[:limit]
+        except Exception as e:
+            logger.error(f"Error searching clinical trials with query: {clinical_trials_query}")
+            logger.error(f"Error: {e}")
+            return []
             
         return trials_data
 
     @staticmethod
-    async def search_clinical_trials(patient_info: str) -> list[dict]:
+    def search_clinical_trials(patient_data: dict) -> list[dict]:
         """
         Asynchronously searches for clinical trials based on patient data and returns a response for each trial, indicating Yes/No if the patient meets all eligibility criteria. Additionally provides an exaplanation as to why.
 
         Args:
-            patient_info(str): The patient information.
+            patient_data(dict): The patient data.
 
         Returns:
             str: A JSON string containing the responses for each clinical trial.
         """
-        if not patient_info:
+        if not patient_data:
             logger.error("No patient information provided")
             return []
 
-        # Parse patient data from string
-        patient_data = await TrialService._parse_patient_data_from_string(patient_info)
-        logger.info(f"Parsed patient data: {patient_data}")
-
         # Generate clinical trial search criteria
-        clinical_trials_query = await TrialService._generate_clinical_trial_search_criteria(patient_data)
+        clinical_trials_query = TrialService._generate_clinical_trial_search_criteria(patient_data)
         logger.info(f"Generated clinical trial search criteria: {clinical_trials_query}")
 
         # Search for clinical trials
-        trials = await TrialService._search_clinical_trials_with_query(clinical_trials_query)
+        trials = TrialService._search_clinical_trials_with_query(clinical_trials_query)
         logger.info(f"Clinical trials found: {len(trials)}")
 
         return trials
 
     @staticmethod
-    async def match_trials_to_patient(trials: list[dict], patient_data: PatientData) -> list[dict]:
-        trial_matching_tasks = []
+    def match_trials_to_patient(trials: list[dict], patient_data: dict) -> list[dict]:
+        eligible_trials = []
         for trial in trials:
             system_prompt = CLINICAL_TRIAL_ELIGIBILITY_PROMPT
             user_prompt = "Structured Patient Attributes: \ndata= " + patient_data.model_dump_json(indent=4) + "\nClinical Trial Eligibility Criteria:\n" + json.dumps(trial, indent=4)
-            response = acompletion(
+            response = completion(
                 model=settings.litellm_model_default,
                 messages=[
                     {"role": "system", "content": system_prompt},
@@ -188,16 +176,15 @@ class TrialService:
                 ],
                 stream=False,
             )
-            trial_matching_tasks.append(response)
-        trial_matching_results = await asyncio.gather(*trial_matching_tasks)
-        eligible_trials = []
-        for trial, trial_matching_result in zip(trials, trial_matching_results):
-            eligibility_result = str(trial_matching_result.choices[0].message.content)
+            eligibility_result = str(response.choices[0].message.content)
             if eligibility_result == "Yes":
                 eligible_trials.append(trial)
             else:
-                logger.info(f"Trial {trial['protocolSection']['identificationModule']['nctId']} is not eligible for the patient. Reason: {eligibility_result}")
-
+                try:
+                    nct_id = trial['protocolSection']['identificationModule']['nctId']
+                    logger.info(f"Trial {nct_id} is not eligible for the patient. Reason: {eligibility_result}")
+                except KeyError:
+                    logger.info(f"Trial is not eligible for the patient. Reason: {eligibility_result}")
         return eligible_trials
 
     @staticmethod
@@ -228,7 +215,6 @@ class TrialService:
             if isinstance(countries, list):
                 countries = ', '.join(countries)
             lines.append(f"  Country: {countries or 'N/A'}")
-            lines.append(f"  Sponsor: {trial.get('sponsor', 'N/A')}")
             lines.append(f"  Completion Date: {trial.get('completion_date', 'N/A')}")
             brief_summary = trial.get('brief_summary')
             if brief_summary:

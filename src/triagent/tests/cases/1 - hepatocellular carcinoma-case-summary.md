@@ -2,7 +2,7 @@ Please give me treatment for this patient:
 # Patient Summary
 
 **Patient**: Not specified  
-**Age**: Not specified  
+**Age**: 39
 **Sex**: Female  
 **Date of Diagnosis**: May 2024  
 **Primary Cancer Type**: Hepatocellular carcinoma (liver primary)  

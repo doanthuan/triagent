@@ -8,9 +8,9 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from triagent.agents.fact_verifier.agents import FactVerifierOrchestrator
-from triagent.agents.fact_verifier.entity import FactVerifierResponse
-from triagent.agents.fact_verifier.utils import parse_final_response
+from triagent.agents.tx_verifier.agent import FactVerifierOrchestrator
+from triagent.agents.tx_verifier.entity import FactVerifierResponse
+from triagent.agents.tx_verifier.utils import parse_final_response
 from triagent.logging import logger
 
 
