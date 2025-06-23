@@ -15,6 +15,7 @@
 ## Fact Verifier Agent
 ![Agent Workflow](imgs/fact_verify_agent.png)
 
+### [Detail Project Description](https://deepwiki.com/doanthuan/triagent)
 
 ## Features
 
